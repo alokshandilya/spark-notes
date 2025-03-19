@@ -1,5 +1,15 @@
 # Introduction
 
+## History
+
+- for our applications which did require storing and processing data.
+  - for a long time it was enough to store data in a single machine.
+  - as the data grew over time and single machine was not enough even with advanced hardware.
+- Google published a paper in 2004 on **Google File System (GFS)** and **MapReduce**.
+  - GFS is a distributed file system that can store large amount of data across multiple machines.
+  - MapReduce is a programming model to process large amount of data in parallel across multiple machines.
+  - led to the development of a similar open source implementation called **Hadoop** having **HDFS (Hadoop Distributed File System)** and **Hadoop MapReduce**.
+
 ## Data Lake
 
 - before HDFS and MapReduce in Hadoop, we had Data Warehouses (Teradata, Exadata etc.)
@@ -58,3 +68,46 @@ to consume data from the data lake. Data lake can be understood simply as a repo
 </p>
 
 > we need many additional capabilities for implementation of our data lake like security, workflow, metadata, data lifecycle, montoring, operations.
+
+## Apache Spark
+
+- most popular, most widely adopted data processing framework in a data lake.
+- a unified analytics engine for large-scale data processing.
+- a multi-language engine for executing data engineering, data science, and machine learning on single-node machines or clusters.
+
+## Spark Ecosystem
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/a1fec4f3-75e9-4aa8-be57-5375d14ebbe8" width="75%">
+</p>
+
+> Spark does not offer cluster management and storage management. All it offers is to run data processing workload managed by spark compute engine.
+
+Spark Engine is responsible for breaking down the data processing work into smaller tasks and scheduling the tasks on the cluster for parallel execution, providing data to these tasks, managing and monitoring these tasks, provide fault tolerance when a job fails, and finally, interact with the cluster manager and the storage system.
+
+- **Spark Core layer:** includes spark engine (a distributed computing engine) and set of core APIs, it all runs on a cluster of machines.
+  - cluster management is done by other frameworks like Hadoop YARN, Apache Mesos or Kubernetes. also, known as resource manager, container orchestrator.
+  - spark also does not come with a inbuilt storage system, it allow to process the data which is stored in variety of storages (like HDFS, S3, Azure Blob, GCS, CFS)
+
+> Spark Core APIs offer a set of APIs in different languages (Scala, Java, Python, R) to develop distributed computing applications. In early releases, these APIs are built on top of RDDs (Resilient Distributed Datasets) but later releases, Spark introduced DataFrames and Datasets APIs which are built on top of RDDs as the core APIs are bit tricky to use, it's recommended to not use these APIs directly.
+>
+> > these APIs offers highest level of flexibility for some complex data processing problems.
+
+**the topmost layer is of prime interest**. this layer is set of libraries, packages, APIs, DSLs (domain specific languages) built by community over and above core APIs. this layers is grouped into 4 categories:
+
+- **SQL and DataFrames:** Spark SQL, DataFrames, Datasets
+  - functional programming style APIs.
+- **Streaming and Real-Time:** Spark Streaming, Structured Streaming
+  - for continuos and unbounded stream of data.
+- **Machine Learning:** MLlib
+  - for machine learning, deep learning and AI requirements.
+- **Graph Processing:** GraphX
+  - for graph processing requirements.
+
+> this grouping is only for understanding, in reality, these libraries are not independent of each other. they are built on top of core APIs and can be used together in a single application.
+
+### Why Spark?
+
+- **Abstraction:** Spark abstracts the complexity of distributed computing (that you are coding to execute your program in a cluster of machines), we'll be working on tables using SQL queries, RDDs, dataframes.
+- **Unified Platform:** combines capabilities of SQL queries, batch processing, stream processing, structured and semi-structured data processing, graph processing, machine learning, deep learning, AI etc.
+- **Ease of use:** in comparison to Hadoop MapReduce, Spark code is shorter, simpler and more readable.
