@@ -87,3 +87,26 @@ To run application, spark gives 2 choices:
   > once the job is submitted, we can log off from the client machine and the job will still run.
 
   > cluster mode is suitable for production jobs, long running jobs.
+
+### Summary
+
+cluster manager is at the top. when we run spark application, the first thing is to decide the cluster manager to use. local and YARN are most common.
+
+- `local[n]` (local machine)
+- YARN
+  - on-premise: mostly cloudera distribution
+  - on-cloud: Databricks, Google Dataproc etc.
+- Kubernetes
+- Mesos
+- Standalone
+
+spark give 2 execution modes:
+
+- client
+- cluster
+
+| Cluster Manager | Execution Modes | Execution Tools       |
+| --------------- | --------------- | --------------------- |
+| `local[n]`      | client          | IDE, Notebook         |
+| YARN            | client          | notebook, spark shell |
+| YARN            | cluster         | spark-submit          |
