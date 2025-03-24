@@ -9,3 +9,7 @@ these are the options to run spark.
 - **Other options:** cloud offerings like AWS EMR, Azure HDInsight, Google Cloud Dataproc etc.
 
 > while spark development and unit testing activity happens mainly in local mode, but knowledge of spark cluster is also important for production deployment.
+
+> I installed `apache-spark` from AUR on my Arch Linux system and set `SPARK_HOME` in my zsh config.
+>
+> > `export SPARK_HOME="/opt/apache-spark"`
