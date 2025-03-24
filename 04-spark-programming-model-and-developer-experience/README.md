@@ -9,7 +9,9 @@
 - `HADOOP_HOME` environment variable
   - for windows, the `winutils.exe` file is also needed
 
-> I installed `apache-spark` from AUR on my Arch Linux system, skipping these steps.
+> I installed `apache-spark` from AUR on my Arch Linux system and set `SPARK_HOME` in my zsh config.
+>
+> > `export SPARK_HOME="/opt/apache-spark"`
 
 ### Configure Spark Application Logs
 
@@ -114,10 +116,14 @@ spark.driver.extraJavaOptions -Dlog4j.configuration=file:/path/to/log4j.properti
 `SparkSession` object is the driver _(one can argue if main method is driver instead)_
 
 - in `spark-shell`, `pyspark` etc. it's already created as `spark` object.
-- in a spark application, we need to create it.
+- in a spark application, we need to create it often named `spark`.
+- `SparkSession` is a singleton object, we can have only one active `SparkSession` object per spark application.
+  > we can't have more than 1 driver in a spark application.
 
 ```python
 from pyspark.sql import SparkSession
 
-spark = SparkSession.builder.getOrCreate()
+spark = SparkSession.builder.appName("Hello Spark").master("local[3]").getOrCreate()
 ```
+
+`SparkSession` is highly configurable, we can set configurations like `appName`, `master` etc.
