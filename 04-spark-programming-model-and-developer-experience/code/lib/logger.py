@@ -6,18 +6,21 @@
 class Log4J:
     """log4j logger class
 
-    NOTE:
-
-    - spark._jvm: special attribute of SparkSession object which provides a
-        gateway to the JVM instance that Spark is running within. It's a bridge
-        that allows Python code to call Java methods and access Java classes.
-
-    - org.apache.log4j: Log4j is a widely used Java logging library.
-        org.apache.log4j is the package name of the Log4j library of Java.
-        Spark itself uses Log4j extensively for its own logging.
+    :param spark: SparkSession object
     """
 
     def __init__(self, spark):
+        """
+        NOTE:
+
+        - spark._jvm: special attribute of SparkSession object which provides a
+            gateway to the JVM instance that Spark is running within. It's a bridge
+            that allows Python code to call Java methods and access Java classes.
+
+        - org.apache.log4j: Log4j is a widely used Java logging library.
+            org.apache.log4j is the package name of the Log4j library of Java.
+            Spark itself uses Log4j extensively for its own logging.
+        """
         log4j = spark._jvm.org.apache.log4j
 
         root_class = "com.example.sparkapp"

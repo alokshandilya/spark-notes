@@ -1,3 +1,2 @@
-25/03/24 17:56:23 INFO Hello Spark Demo Application: Starting HelloSpark Demo Application
-25/03/24 17:56:28 INFO Hello Spark Demo Application: Finished reading data from file
-25/03/24 17:56:28 INFO Hello Spark Demo Application: Finished processing data
+25/03/25 16:56:45 INFO Hello Spark: Hello, Spark!
+25/03/25 16:56:51 INFO Hello Spark: Stopping Spark Application
