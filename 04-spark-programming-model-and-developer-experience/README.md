@@ -15,7 +15,7 @@
 
 ### Configure Spark Application Logs
 
-Spark projects uses `log4j` for logging.It's similar to python logging. [docs - python logging](https://docs.python.org/3/howto/logging.html).
+Spark projects uses `log4j` for logging. It's similar to python logging. [docs - python logging](https://docs.python.org/3/howto/logging.html).
 
 It's a 3 step process:
 
@@ -37,62 +37,7 @@ It's a 3 step process:
     3. By setting it to `WARN`, you're filtering out `DEBUG` and `INFO` messages, which are typically used for detailed debugging and informational purposes.
 - `Appenders` - output destinations such as console, log files etc, are configured in `log4j.properties` file.
 
-`# log4j.properties` file
-
-```python
-
-# Set everything to be logged to the console
-log4j.rootCategory=WARN, console
-
-# Define console appender
-"""
-are standard and remain same in most of the projects
-
-- this section with the previous line of rootCatergory sets up root level
-  log4j configuration and will stop all the log messages sent by the Spark
-  and other packages except warnings and errors, we will get clean and minimal
-  log output.
-"""
-log4j.appender.console=org.apache.log4j.ConsoleAppender
-log4j.appender.console.target=System.out
-log4j.appender.console.layout=org.apache.log4j.PatternLayout
-log4j.appender.console.layout.ConversionPattern=%d{yy/MM/dd HH:mm:ss} %p %c{1}: %m%n
-
-# Application Log
-"""
-- 2nd log level specific to the spark application.
-  - targetting a specific logger (com.example.sparkapp, adjust package name)
-  - we are stopping log messages from com.example.sparkapp from being processed
-    by it's parent loggers preventing duplicate logs.
-"""
-log4j.logger.com.example.sparkapp=INFO, console, file
-log4j.additivity.com.example.sparkapp=false
-
-# Define file appender
-log4j.appender.file=org.apache.log4j.RollingFileAppender
-"""
-- spark.yarn.app.container.log.dir variable: to find the log file directory location
-- ${logfile.name}.log: to find log file name
-"""
-log4j.appender.file.File=${spark.yarn.app.container.log.dir}/${logfile.name}.log
-log4j.appender.file.ImmediateFlush=true
-log4j.appender.file.Append=false
-log4j.appender.file.MaxFileSize=500MB
-log4j.appender.file.MaxBackupIndex=2
-log4j.appender.file.layout=org.apache.log4j.PatternLayout
-log4j.appender.file.layout.conversionPattern=%d{yy/MM/dd HH:mm:ss} %p %c{1}: %m%n
-
-# Recommendations from Spark log4j configuration template
-log4j.logger.org.apache.spark.repl.Main=WARN
-log4j.logger.org.spark_project.jetty=WARN
-log4j.logger.org.spark_project.jetty.util.component.AbstractLifeCycle=ERROR
-log4j.logger.org.apache.spark.repl.SparkIMain$exprTyper=INFO
-log4j.logger.org.apache.spark.repl.SparkILoop$SparkILoopInterpreter=INFO
-log4j.logger.org.apache.parquet=ERROR
-log4j.logger.parquet=ERROR
-log4j.logger.parquet.hadoop.hive.metastore.RetryingHMSHandler=FATAL
-log4j.logger.org.apache.hadoop.hive.ql.exec.FunctionRegistry=ERROR
-```
+`# log4j.properties` file _(in code directory)_
 
 > As Spark follows Master-Slave Architecture and application has a driver and multiple executor processes. All these executors are individual JVMs running on different machines in the clustor. The driver is running on a machine/node and the executors are running on different machines/nodes and there is no control over it, we don't know what is going to be executed and on which machine. All of this is managed by Clutser Manager.
 
@@ -127,3 +72,82 @@ spark = SparkSession.builder.appName("Hello Spark").master("local[3]").getOrCrea
 ```
 
 `SparkSession` is highly configurable, we can set configurations like `appName`, `master` etc.
+
+## Configuring Spark Session
+
+- Environment variables
+  - for setting local dev environment
+  - eg. `SPARK_HOME`, `HADOOP_HOME`, `PYSPARK_PYTHON` etc.
+  - mostly ignored by developer except for setting up local dev environment.
+  - mainly used by cluster admins.
+- `$SPARK_HOME/conf/spark-defaults.conf`
+  - for jvm varibles such as log4j configuration file, log file location and name
+  - to set default configurations for all the applications
+  - mostly ignored by developer except for setting up local dev environment.
+  - mainly used by cluster admins.
+- `spark-submit` command line arguments
+
+  - **_used by developers._**
+  - eg. `--master` etc.
+  - can accept any spark config using `--conf` option
+
+  ```bash
+  spark-submit --master local[3] --conf spark.app.name="Hello Spark" --conf spark.eventLog.enabled=false HelloSpark.py
+  ```
+
+- `SparkConf` object
+
+  - **_used by developers._**
+  - to set configurations programmatically.
+
+  ```python
+  from pyspark.sql import SparkSession
+
+  spark = SparkSession.builder.appName("Hello Spark").master("local[3]").getOrCreate()
+  ```
+
+  ```python
+  from pyspark import SparkConf
+  from pyspark.sql import SparkSession
+
+  conf = SparkConf()
+
+  # should know actual config property name string
+  conf.set("spark.app.name", "Hello Spark")
+  conf.set("spark.master", "local[3]")
+
+  spark = SparkSession.builder.config(conf=conf).getOrCreate()
+  ```
+
+  > **Spark Docs:** [_application configuration property name strings_](https://spark.apache.org/docs/latest/configuration.html#application-properties)
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/961807bc-2c9a-4fdc-9e9d-bb9beea38571" width="75%">
+</p>
+
+### When to use which configuration method?
+
+- dont make your application depend on environment variables and `spark-defaults.conf` file.
+- spark properties can be grouped into 2 categories:
+  - **Deployment related configs:** `spark.driver.memory`, `spark.exector.instances` etc. these depend on deployment mode and cluster manager being chosen. We often set them from `spark-submit` command line.
+  - **Control spark application runtime behaviour:**: `spark.task.maxFailures`, `spark.sql.shuffle.partitions` etc. these are set programmatically using `SparkConf` object.
+
+> `spark-submit --help` to see options for `spark-submit` command.
+
+## DataFrame
+
+- 2D table like data structure inspired by Pandas DataFrame.
+- **distributed table with _named columns_ and _well defined schema_**, each column has a specific data type such as integer, float, string, timestamp etc.
+- optimized for distributed processing across clusters.
+
+`SparkSession` offers a `read` method to read data from a file (csv, json etc.) which mostly will be stored in a distributed storage like HDFS, cloud storage (S3 etc). All these distributed storage systems are designed to partition the data file and store those partitions across the destributed storage nodes.
+
+Each storage node may have one or more partitions of the data file. Spark DataFrameReader reads the data file, since the data is already partitioned so the DataFrameReader reads them as a bunch of in-memory partitions.
+
+> A DataFrame can thus be considered as a bunch of smaller dataframes each logically representing a partition.
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/409df9a7-7cb4-4bf5-bbb6-e066b32fff34" width="75%">
+</p>
+
+
