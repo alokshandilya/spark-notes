@@ -140,6 +140,9 @@ spark = SparkSession.builder.appName("Hello Spark").master("local[3]").getOrCrea
 - **distributed table with _named columns_ and _well defined schema_**, each column has a specific data type such as integer, float, string, timestamp etc.
 - optimized for distributed processing across clusters.
 
+**How DataFrame is distributed data structure?**  
+**How it helps to perform distributed processing?**
+
 `SparkSession` offers a `read` method to read data from a file (csv, json etc.) which mostly will be stored in a distributed storage like HDFS, cloud storage (S3 etc). All these distributed storage systems are designed to partition the data file and store those partitions across the destributed storage nodes.
 
 Each storage node may have one or more partitions of the data file. Spark DataFrameReader reads the data file, since the data is already partitioned so the DataFrameReader reads them as a bunch of in-memory partitions.
@@ -150,4 +153,101 @@ Each storage node may have one or more partitions of the data file. Spark DataFr
     <img src="https://github.com/user-attachments/assets/409df9a7-7cb4-4bf5-bbb6-e066b32fff34" width="75%">
 </p>
 
+`spark.read.csv()` where `spark` is the `SparkSession` object (driver). So, in order to read the file, the driver reaches out to cluster manager and storage manager to get details of the data file partitions. At runtime, driver knows how to read data file and how many partitions are there.
 
+Hence, it creates a logical in-memory data structure called `DataFrame`. Nothing is loaded in the memory yet, it's just a logical structure with enough information to actually load it.
+
+Driver again reaches out to cluster manager and asks for containers. Once those containers are allocated, the driver starts the executors on those containers. Each executor is a JVM process with some assigned CPU cores and memory.
+
+Now the driver is ready to distribute the data file partitions to the executors. The driver sends the data file partitions to the executors. The executors load the data file partitions into memory and start processing the data.
+
+<table>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/8490697a-da74-4a4f-adee-938fb2e0a586">
+        </td>
+        <td>
+            <img src="https://github.com/user-attachments/assets/201b1c6c-9d1d-40b4-812e-89bdebfefc4f">
+        </td>
+</table>
+
+- each executor core is assigned it's own data partition/s to work upon.
+- spark tries to minimize the network bandwidth for loading data from the physical storage to the JVM memory.
+  > it's an internal spark optimization, while assigning partitions to the executors, spark tries to allocate partitions which are closest to the executors in the network. However, such data locality is not always possible. Spark and the cluter manager tries to achieve the best possible data localization.
+
+### Transformations
+
+#### Narrow Dependency vs Wide Dependency Transformations
+
+RDDs (Resilient Distributed Datasets) are Spark's core abstraction, representing immutable, partitioned collections enabling parallel operations. They are fault-tolerant due to lineage, which allows reconstruction of lost partitions, and distributed for efficient cluster processing. RDDs support **transformations** (lazy operations creating new RDDs, like `map` or `filter`) and **actions** (triggering computation and returning results, such as `count` or `collect`). While DataFrames and Datasets are preferred for structured data due to schema enforcement and optimization, RDDs remain valuable for unstructured data and situations requiring fine-grained control. Understanding narrow and wide transformations, which dictate data shuffling, is crucial for performance optimization. Spark's `read` operation defines data sources, acting as a setup rather than immediate execution, though `inferSchema=True` and certain file system interactions can trigger actions.
+
+> Spark Dataframe is an abstraction built on top of RDDs, offering a higher-level, structured way to work with data, while RDDs are the fundamental, low-level data structure in Spark. Resilient distributed datasets (RDDs) and DataFrames are two storage organization strategies used in Apache Spark. RDD is a collection of data objects across nodes in an Apache Spark cluster, while a DataFrame is similar to a standard database table where the schema is laid out into columns and rows.
+
+RDDs support two types of operations: **transformations**, which create a new dataset from an existing one, and **actions**, which return a value to the driver program after running a computation on the dataset. For example, `map` is a transformation that passes each dataset element through a function and returns a new RDD representing the results. On the other hand, `reduce` is an action that aggregates all the elements of the RDD using some function and returns the final result to the driver program (although there is also a parallel `reduceByKey` that returns a distributed dataset).
+
+All transformations in Spark are _lazy_, in that they do not compute their results right away. Instead, they just remember the transformations applied to some base dataset (e.g. a file). The transformations are only computed when an action requires a result to be returned to the driver program. This design enables Spark to run more efficiently. For example, we can realize that a dataset created through `map` will be used in a `reduce` and return only the result of the `reduce` to the driver, rather than the larger mapped dataset.
+
+By default, each transformed RDD may be recomputed each time you run an action on it. However, you may also _persist_ an RDD in memory using the `persist` (or `cache`) method, in which case Spark will keep the elements around on the cluster for much faster access the next time you query it. There is also support for persisting RDDs on disk, or replicated across multiple nodes.
+
+Spark data processing is all about creating a **DAG (Directed Acyclic Graph)** of operations
+
+- these operations are transformations and actions.
+- **Transformations**: are lazy operations to transform one dataframe to
+  another dataframe without modifying the original dataframe. eg. `where`.
+  - **narrow dependency transformation**: transformation performed
+    independently on a single partition to produce valid results. eg. `where`.
+  - **wide dependency transformation**: transformation that requires data from
+    other partitions to produce valid results. eg. `groupBy`.
+
+<table>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/e4368896-0e8d-4f5a-a0b2-35cf09987a5a">
+        </td>
+        <td>
+            <img src="https://github.com/user-attachments/assets/07a96502-8679-442c-a6ae-10c6ecf63c70">
+        </td>
+    </tr>
+</table>
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/96fddb8b-a4e0-4f7c-8d3a-dd06cb431478" width="75%">
+</p>
+
+##### Lazy Evaluation
+
+- it's a functional programming technique.
+
+```python
+spark = SparkSession.builder.config(conf=conf).getOrCreate()
+
+survey_df = load_survey_df(spark, sys.argv[1])
+filtered_df = survey_df.where("Age < 40")
+selected_df = filtered_df.select("Age", "Gender", "Country", "state")
+grouped_df = selected_df.groupBy("Country")
+count_df = grouped_df.count()
+
+count_df.show()
+```
+
+- Here, we are using builder pattern to create a DAG (Directed Acyclic Graph)
+  of transformations. All of this go to spark driver, spark driver creates an
+  optimized execution plan and sends it to the executors.
+
+> These statements are not executed as individual operations but they are converted into an optimized execution plan which is triggered/terminated by an action.
+
+### Actions
+
+- READ, WRITE, COLLECT, SHOW etc.
+  - eg. `df.show()`
+
+<table>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/07d42eeb-91ba-4b2c-a072-c3ee7be3a850">
+        </td>
+        <td>
+            <img src="https://github.com/user-attachments/assets/89d99ee5-0d53-4d4f-b0dd-9b3ae7b4d17c">
+        </td>
+    </tr>
+</table>
