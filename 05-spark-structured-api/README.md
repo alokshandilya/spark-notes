@@ -43,3 +43,10 @@ Additionally, Spark employs a Directed Acyclic Graph (DAG) execution engine to o
 - spark could not look inside the lambda functions.
 
 These 2 things make RDDs less optimized compared to Dataframe APIs because spark could not optimize the execution plan.
+
+## Spark SQL
+
+- most convinient
+- works only tables and views.
+- sparks allows to register a dataframe as a view, using `createOrReplaceTempView` method.
+- [code](code/02-SparkSQL/HelloSparkSQL.py) - _create a simple Spark SQL_
