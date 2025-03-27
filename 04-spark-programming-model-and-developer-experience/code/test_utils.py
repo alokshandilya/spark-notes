@@ -7,6 +7,10 @@ from pyspark.sql import SparkSession
 class TestUtils(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        """
+        hook method for setting up class fixture before running tests in the
+        class
+        """
         cls.spark = (
             SparkSession.builder.master("local[3]")
             .appName("HelloSparkTest")
@@ -15,6 +19,10 @@ class TestUtils(TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
+        """
+        hook method for deconstructing the class fixture after running all
+        tests in the class
+        """
         cls.spark.stop()
 
     def test_datafile_loading(self):

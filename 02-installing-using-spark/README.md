@@ -13,3 +13,7 @@ these are the options to run spark.
 > I installed `apache-spark` from AUR on my Arch Linux system and set `SPARK_HOME` in my zsh config.
 >
 > > `export SPARK_HOME="/opt/apache-spark"`
+
+- `$SPARK_HOME/conf/spark-defaults.conf` (/opt/apache-spark/ is my SPARK_HOME)
+- add this line
+- `spark.driver.extraJavaOptions -Dlog4j.configuration=file:log4j.properties -Dspark.yarn.app.container.log.dir=app-logs -Dlogfile.name=sparkapp`
