@@ -251,3 +251,74 @@ count_df.show()
         </td>
     </tr>
 </table>
+
+## Jobs, Stages and Tasks
+
+- **Job:** A job in Spark _corresponds to an **action**_ (e.g, `collect`, `count`, `show`) that triggers the execution of a set of transformations. Each job can consist of one or more stages.
+- **Stage:** A stage is a _group of tasks that can be executed together without shuffling data/Exchange_. Stages are separated by shuffle boundaries (wide transformations like `groupBy`, `join`, etc.).
+- **Task:** A task is the _smallest unit of work in Spark_, corresponding to processing a partition of data within a stage.
+
+> spark break the code into sections separated by actions. Each section is called a job. Each job is further divided into stages. Each stage is further divided into tasks.
+
+- reading a file, infer schema are 2 intenal actions. Hence, they are 2 jobs.
+- `repartition` is a wide transformation, hence it's a stage.
+- `groupBy` is a wide transformation, hence it's a stage.
+- `collect` is an action, hence it's a job.
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/82a1cd53-5290-41f4-95b2-fbfefad8cc5e" width="75%">
+</p>
+
+- `repartition`, `select`, `where`, `groupBy` and `count`: all these are planned as single job triggered by `collect` action.
+- spark will create a DAG for each job and break it into stages separated by a shuffle/exchange _(internal buffer)_ operation.
+
+<table>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/ebf9965e-4be9-424a-b937-3b2e930052bb">
+        </td>
+        <td>
+            <img src="https://github.com/user-attachments/assets/9ef36720-561c-49f8-8947-4d164cd03eba">
+        </td>
+    </tr>
+</table>
+
+```python
+import configparser
+import sys
+
+from pyspark import SparkConf
+
+
+def get_spark_app_config():
+    spark_conf = SparkConf()
+    config = configparser.ConfigParser()
+    config.read("spark.conf")
+
+    for key, val in config.items("SPARK_APP_CONFIGS"):
+        spark_conf.set(key, val)
+
+    return spark_conf
+```
+
+```python
+conf = get_spark_app_config()
+spark = SparkSession.builder.config(conf=conf).getOrCreate()
+```
+
+`# spark.conf`
+```
+[SPARK_APP_CONFIGS]
+spark.app.name = Hello Spark
+spark.master = local[3]
+spark.sql.shuffle.partitions = 2
+spark.sql.adaptive.enabled = false
+# app.author = Alok Shandilya
+```
+
+> AQE (adaptive query execution) can otherwise create different number of jobs in this case.
+
+### Unit testing
+
+- `unittest` module
+- see example here [code](code/test_utils.py)

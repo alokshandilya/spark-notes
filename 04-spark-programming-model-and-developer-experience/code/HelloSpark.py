@@ -1,10 +1,12 @@
 import sys
 
 from lib.logger import Log4J
-from lib.utils import get_spark_app_config, load_data_csv_df
+from lib.utils import count_by_country, get_spark_app_config, load_data_csv_df
 from pyspark.sql import SparkSession
 
-conf = get_spark_app_config()
+if __name__ == "__main__":
+    conf = get_spark_app_config()
+    spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
 spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
