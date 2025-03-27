@@ -16,3 +16,12 @@ def get_spark_app_config():
 
 def load_data_csv_df(spark, data_file):
     return spark.read.csv(data_file, header=True, inferSchema=True)
+
+
+def count_by_country(survey_df):
+    return (
+        survey_df.where("age < 40")
+        .select("age", "gender", "country", "state")
+        .groupBy("country")
+        .count()
+    )

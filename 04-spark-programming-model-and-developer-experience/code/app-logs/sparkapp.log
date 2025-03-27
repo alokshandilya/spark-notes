@@ -1,2 +1,2 @@
-25/03/25 16:56:45 INFO Hello Spark: Hello, Spark!
-25/03/25 16:56:51 INFO Hello Spark: Stopping Spark Application
+25/03/27 15:19:05 INFO Hello Spark: Hello, Spark!!
+25/03/27 15:19:12 INFO Hello Spark: [[UK, 2], [Australia, 1], [Germany, 1], [India, 4], [Canada, 1], [Japan, 1]]
