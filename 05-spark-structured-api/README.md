@@ -50,3 +50,16 @@ These 2 things make RDDs less optimized compared to Dataframe APIs because spark
 - works only tables and views.
 - sparks allows to register a dataframe as a view, using `createOrReplaceTempView` method.
 - [code](code/02-SparkSQL/HelloSparkSQL.py) - _create a simple Spark SQL_
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/8bf402f3-a9a0-4f88-bab3-be194315c417" width="75%">
+</p>
+
+SparkSQL, Dataframe APIs, Dataset APIs are internally powered by Spark SQL Engine, which is a compiler that optimizes the code and generates efficient java bytecode.
+
+- **Analysis:** reads the code and creates abstract syntax tree (AST) for SQL or dataframe queries. Column names, tables, view names, SQL functions are resolved, we might get a runtime error as analysis error at this stage when the names are not resolved.
+- **Logical Optimization:** SQL Engine will applies rules based optimization and construct a set of multiple execution plans, the catalyst optimizer will use cost based optimization to assign a cost to each plan. It includes standard SQL optimization techniques like predicate pushdown, projection pruning, boolean expression simplification, constant folding, etc.
+- **Physical Planning:** the SQL Engine picks the most effective logical plan and generates a physical plan (set of RDD operations determining how plan will execute on cluster).
+- **Code Generation:** generate efficient Java bytecode to run on each machine, was introduced in spark 2.0 from project Tungsten.
+
+> Project Tungsten was initiated to apply ideas from modern compilers and MPP databases (massively parallel processing databases) and make spark run more efficiently.
