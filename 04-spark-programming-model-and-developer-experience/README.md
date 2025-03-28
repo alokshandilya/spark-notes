@@ -37,7 +37,7 @@ It's a 3 step process:
     3. By setting it to `WARN`, you're filtering out `DEBUG` and `INFO` messages, which are typically used for detailed debugging and informational purposes.
 - `Appenders` - output destinations such as console, log files etc, are configured in `log4j.properties` file.
 
-`# log4j.properties` file _(in code directory)_
+`# log4j.properties` file [code](code/log4j.properties)
 
 > As Spark follows Master-Slave Architecture and application has a driver and multiple executor processes. All these executors are individual JVMs running on different machines in the clustor. The driver is running on a machine/node and the executors are running on different machines/nodes and there is no control over it, we don't know what is going to be executed and on which machine. All of this is managed by Clutser Manager.
 
