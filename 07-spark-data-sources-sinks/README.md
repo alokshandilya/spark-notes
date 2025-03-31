@@ -73,7 +73,7 @@ spark.read
   - **explicit**
   - **infer schema**
   - **implicit**: like parquet, avro etc.
-- :star2: refer [code]()
+- :star2: refer [code](code/01-SparkSchema/HelloSparkReader.py).
 
 > DataFrameReader also comes with some shortcuts and variations. eg. `csv()`, `json()` etc. It's recommended not to use these shortcuts as they are not consistent with the rest of the API. It's better to use the `format()` method and specify the format explicitly for better code maintainability and readability.
 
@@ -86,8 +86,6 @@ spark.read
 - Spark SQL can automatically infer the schema of a JSON dataset and load it as a DataFrame. This conversion can be done using `SparkSession.read.json` on a JSON file.
 - Note that the file that is offered as a _json file_ is not a typical JSON file. Each line must contain a separate, self-contained valid JSON object. [For more information, please see JSON Lines text format, also called newline-delimited JSON](https://jsonlines.org/).
 - For a regular multi-line JSON file, set the `multiLine` parameter to `True`.
-
-to explicitly setting schema for dataframes see [code]()
 
 - dataframe schema is all about setting the column name and appropriate data
   types. _one should know spark supported data types._
@@ -123,9 +121,8 @@ Spark allows to define schema in 2 ways:
   _(column_name, data_type)_
   - `StructType`: represents the schema of a DataFrame. It is a collection of `StructField` objects.
   - `StructField`: represents a single field in the schema. It contains the name, data type, and whether the field can be null or not.
-  - refer code: [code]()
 - **Using DDL (Data Definition Language) string** _(much simpler)_
-- refer code: [code]()
+- refer code: [code](code/01-SparkSchema/HelloSparkReader.py)
 
 ```python
 employeeSchemaStruct = StructType([
