@@ -285,14 +285,6 @@ LOCATION "data_file_location"
     </tr>
     <tr>
         <td>
-            <img src="https://github.com/user-attachments/assets/dc2eb63e-439c-4f00-812c-a95adefeef45">
-        </td>
-    </tr>
-</table>
-
-<table>
-    <tr>
-        <td>
             <img src="https://github.com/user-attachments/assets/7a1b3295-496e-4494-857c-ab99c6428a0e">
         </td>
         <td>
