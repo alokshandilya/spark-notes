@@ -1,0 +1,4 @@
+25/03/31 12:55:28 INFO SparkSinkDemo: Starting Spark Data Sink!!
+25/03/31 12:55:32 INFO SparkSinkDemo: Num Partitions before: 2
+25/03/31 12:55:34 INFO SparkSinkDemo: null
+25/03/31 12:55:37 INFO SparkSinkDemo: Num Partitions after: 5
