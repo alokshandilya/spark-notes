@@ -211,10 +211,92 @@ The random and equal paritions achieves parallel processing but not partition el
 
 Here, in the json file got in `OP_CARRIER=HP/ORIGIN=ABQ` will not have `OP_CARRIER`, `ORIGIN` because of redundancy.
 
-`OP_CARRIER=DL/ORIGIN=ATL` is the biggest file got with ~19K records. We can use `maxRecordPerFile` for 10k _(it will split the result file into 2 files)_
+`OP_CARRIER=DL/ORIGIN=ATL` is the biggest file got with ~19K records. We can use `maxRecordPerFile` for 10k _(it will split the result file into 2 files) [see](code/02-DataSink/dataSink/json/OP_CARRIER=DL/ORIGIN=ATL/)._
 
 ```python
 .option("maxRecordsPerFile", 10000).save()
 ```
 
-[see](code/02-DataSink/dataSink/json/OP_CARRIER=DL/ORIGIN=ATL/)
+## Spark Databases and Tables
+
+Apache spark is not only a set of APIs and a processing engine, it's can also be seen as a database in itself. We can create database in spark, in the database we can create **tables** and **views**.
+
+- table has _table data (as datafiles in the distributed storage)_ and _table metadata (stored in **catalog metastore**)_.
+  - by default, the datafile is in parquet format, but we can change it to any other format.
+  - catalog metastore holds the information about table, it's data such as schema, table name, database name, column names, partitions, the physical location where the actual data resides.
+  - by default, the catalog metastore is in memory which is maintained per
+    spark session, and goes away when session ends.
+  - for persistent, durable metastore: _apache hive metastore_.
+
+Spark allows to create **2 types of tables**:
+
+- **Managed Tables**: _manages both metadata and data_.
+  - creating managed table `dataframe.write.saveAsTable("table_name")`, spark
+    does 2 things: create and store metadata in the catalog metastore, write data
+    inside a predefined directory location `spark.sql.warehouse.dir`, which is
+    set up by cluster admin.
+    > we can't and shouln't change this on runtime.
+- **Unmanaged tables (external tables)**: same with respect to metadata but
+  different in terms of data storage location.
+
+  - create metadata in the catalog metastore.
+  - must specify the data directory location for the table.
+  - give flexibility to store data at your preferred location.
+    > suppose we have data stored somewhere and we want to perform spark sql
+    > queries on that data. eg. `SELECT count(*) FROM ...`, Spark SQL engine does
+    > not know anything about this data. We can create an unmanaged table and map
+    > the same data to a spark table, now spark will create metadata and store
+    > data. This will allow you to execute spark sql on this data.
+
+  > **Note**: if we drop a managed table, it will drop both metadata and data.
+  > If we drop an unmanaged table, it will only drop the metadata but not the
+  > data. Unmanaged table are designed for temporarily mapping you existing
+  > data and using it in spark sql. Once you are done using it, drop them and
+  > only metadata goes away, leaving the data files intact.
+
+  > We prefer managed tables because it offers additional features such as
+  > bucketing, sorting. All future improvements in spark sql will target
+  > managed tables, unmanaged tables are external tables and spark doesn't have
+  > enough control on them. They are designed for reusing existing data in
+  > spark sql and it should be used in those scenarios only.
+
+```sql
+CREATE TABLE table_name (col1 data_type, col2 data_type, ...)
+USING PARQUET
+LOCATION "data_file_location"
+```
+
+<table>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/5b8893c7-52cf-4045-8613-22087666155d">
+        </td>
+        <td>
+            <img src="https://github.com/user-attachments/assets/f76b38f4-1a92-4b12-9bf9-9feaaa3ee1b3">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/eb0b8863-62bd-4adc-a575-120d7e926a24">
+        </td>
+        <td>
+            <img src="https://github.com/user-attachments/assets/26852c2c-e583-470a-9036-5b77753b7ba5">
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/dc2eb63e-439c-4f00-812c-a95adefeef45">
+        </td>
+    </tr>
+</table>
+
+<table>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/7a1b3295-496e-4494-857c-ab99c6428a0e">
+        </td>
+        <td>
+            <img src="https://github.com/user-attachments/assets/2e7241ac-d0b4-41b3-8e63-4800ada227e3">
+        </td>
+    </tr>
+</table>
