@@ -292,3 +292,102 @@ LOCATION "data_file_location"
         </td>
     </tr>
 </table>
+
+## Working with Spark Tables
+
+```python
+spark = (
+    SparkSession.builder.master("local[3]")
+    .appName("SparkSQLTableDemo")
+    .enableHiveSupport()  # allow the connectivity to a persistent hive metastore
+    .getOrCreate()
+)
+```
+
+- **why to save dataframe as a managed table? why not as a parquet file? what's the difference?**
+  > we can save processed data to a data file _(parquet, avro etc.)_. If we want to re-access it, we have to use `DataFrameReader` API to read it as a dataframe. However, spark is a database also, if we create a managed table in spark database then the data is available to a lot of other sql compliant tools. Spark database tables can be accessed using SQL expressions using JDBC/ODBC connectors. So you can use other third party tools like tableau, talend, power BI, etc. to access the data in the spark database. Plain data files such as parquet, avro, json, csv etc. are not accessible through JDBC/ODBC interface.
+- see code [_here_](code/03-SparkSQLTable/SparkSQLTableDemo.py)
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/5d889475-8877-4538-83a8-5df4d8826cd5" width="75%">
+</p>
+
+Writing a dataframe is simple `dataframe.write`. `saveAsTable("table_name")` is
+a method of `DataFrameWriter` class.
+
+- `saveAsTable` method takes table_name and creates a managed table in the
+  current spark database.
+- spark, comes with a default database called `default`.
+
+```python
+flightTimeParquetDF.write.mode("overwrite").saveAsTable("flight_data_tbl")
+```
+
+- this will create `flight_data_tbl` table in the default database.
+
+```python
+flightTimeParquetDF.write.mode("overwrite").saveAsTable("AIRLINE_DB.flight_data_tbl")
+```
+
+- this will create `flight_data_tbl` table in the `AIRLINE_DB` database.
+
+```python
+spark.sql("CREATE DATABASE IF NOT EXISTS AIRLINE_DB")
+spark.catalog.setCurrentDatabase("AIRLINE_DB")
+
+flightTimeParquetDF.write.mode("overwrite").saveAsTable("flight_data_tbl")
+
+logger.info(spark.catalog.listTables("AIRLINE_DB"))
+```
+
+- this will create `flight_data_tbl` table in the `AIRLINE_DB` database.
+
+```python
+flightTimeParquetDF.write.mode("overwrite").partitionBy(
+    "ORIGIN",
+    "OP_CARRIER"
+).saveAsTable("flight_data_tbl")
+```
+
+> depending on number of different origins and carriers, it will create
+> multiple folders/files. If we have 200+ distinct origins then it will create
+> 200+ partitions. For a large dataset, 200+ partitions are still fine. However,
+> what if we had 100000+ distinct partitions?
+
+> we should not partition for a column that has too many unique values. Instead
+> we can use the `bucketBy(5, "OP_CARRIER", "ORIGIN")`: it allows restrict the number of partitions,
+> it will create 5 partitions called buckets partitioned by same 2 columns.
+
+```python
+flightTimeParquetDF.write \
+    # to be able to see data on file opening (not possible in parquet)
+    # however parquet is recommended
+    .format("csv") \
+    .mode("overwrite") \
+    .bucketBy(5, "OP_CARRIER", "ORIGIN") \
+    .saveAsTable("flight_data_tbl")
+```
+
+- bucketing does not require a lengthy directory structure. It's as simple as
+  data files.
+
+<img src="https://github.com/user-attachments/assets/bd9a40b4-9789-45fd-bfe0-e1e1abfecda6" width="75%">
+
+- as an end result, each unique key combination is going to produce same hash
+  value, hence, it will end in same hash file.
+  - eg. all records for `OP_CARRIER=DL`, `ORIGIN=CLE` will land
+    in the 1st file only. [see](code/03-SparkSQLTable/spark-warehouse/airline_db.db/flight_data_tbl/part-00000-f1bfd3bc-084e-414f-a3b9-7f0ba08209f1_00000.c000.csv)
+    > sometimes, these buckets can improve join operations significantly. However,
+    > if these records are sorted they could be much more ready to use for certain
+    > operations.
+
+```python
+flightTimeParquetDF.write \
+    .format("csv") \
+    .mode("overwrite") \
+    .bucketBy(5, "OP_CARRIER", "ORIGIN") \
+    .sortBy("OP_CARRIER", "ORIGIN") \
+    .saveAsTable("flight_data_tbl")
+```
+
+> see [_code_](code/03-SparkSQLTable/SparkSQLTableDemo.py)
