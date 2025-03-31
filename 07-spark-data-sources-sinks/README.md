@@ -144,3 +144,77 @@ employeeSchemaDF = spark.read \
 
 - `StructType` represents a dataframe **row structure**.
 - `StructField` is a **column definition**.
+
+## Spark Data Sink API
+
+- `DataFrameWriter` API: [docs](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrameWriter.html)
+
+**General Structure**:
+
+```
+DataFrameWriter
+    .format(...)
+    .option(...)
+    .partitionBy(...)
+    .bucketBy(...)
+    .sortBy(...)
+    .save()
+```
+
+**Indicative Example**:
+
+```python
+DataFrame.write
+    .format("parquet")
+    .mode("saveMode")
+    .option("path", "/data/flights/")
+    .save()
+```
+
+- **`format`**: specifies the format of the data to be written.
+  - _by default_, it is set to `parquet`.
+  - **built-in formats**: csv, json, parquet, orc, jdbc etc.
+  - **community formats**: cassandra, mongodb, avro, xml, hbase, redshift etc.
+- **`option`**: specifies the options for the data source.
+- **`mode`**: specifies the save mode for the data source.
+  - **4 save modes**: `append`, `overwrite`, `ignore`, `error` (default)
+    1. **append**: appends the data to the existing data in the data source.
+    2. **overwrite**: overwrites the existing data in the data source with the new data.
+    3. **ignore**: ignores the new data if the data source already exists.
+    4. **errorIfExists**: throws an error if the data source already exists.
+
+### Spark File Layout
+
+1. Number of files and file size.
+2. Organizing output in partitions and buckets.
+3. Storing sorted data.
+
+Dataframes are partitioned. when we write dataframe to file system, we get one output file per partition (_default behaviour_). Each partition is written by an execution core in parallel. This default behaviour can be tweaked:
+
+- repartitioning the dataframe before writing it to file system.
+
+  - `DataFrame.repartition(n)`: repartitions the dataframe into `n` partitions, could be blind repartitioning which will not help in most of the situations.
+  - `DataFrame.partitionBy(col1, col2)`: repartition data based on key column (_single such as `country_code`, or composite column such as `country_code` + `state_code`_). Helps to break the data logically. Helps to improve the spark SQL performance using partition pruning technique.
+    1. `maxRecordPerFile`: allows limiting number of records per file. Helps to control the file size based on the number of records and prevent from creating huge and inefficient files.
+  - `DataFrame.bucketBy(n, col1, col2)`: partition data into fixed number of pre-defined buckets, known as _bucketing_. However, it's only avaialble on spark managed tables.
+    1. `sortBy()`: sort the data within each bucket, create sorted buckets.
+
+  > `partitionBy`, `bucketBy` are 2 options to logically partition the data.
+
+Paritioning data into equal chunks may not make perfect sense in most of the cases. However, we do want to partition the data _(because we will be working with massive volumes, partitioning have 2 benefits **parallel processing**, **partition elimination for certain read operations**)_
+
+The random and equal paritions achieves parallel processing but not partition elimination. So, we might want to partition data for specific columns using `partitionBy`.
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/5446409a-3b9a-418a-bdc8-b3aa39ef9f01" width="75%">
+</p>
+
+Here, in the json file got in `OP_CARRIER=HP/ORIGIN=ABQ` will not have `OP_CARRIER`, `ORIGIN` because of redundancy.
+
+`OP_CARRIER=DL/ORIGIN=ATL` is the biggest file got with ~19K records. We can use `maxRecordPerFile` for 10k _(it will split the result file into 2 files)_
+
+```python
+.option("maxRecordsPerFile", 10000).save()
+```
+
+[see](code/02-DataSink/dataSink/json/OP_CARRIER=DL/ORIGIN=ATL/)
