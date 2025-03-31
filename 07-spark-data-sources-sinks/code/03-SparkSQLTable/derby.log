@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Mon Mar 31 16:43:05 IST 2025:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-0195-ebe7-b484-000004550a20 
+on database directory /home/aloks/spark-notes/07-spark-data-sources-sinks/code/03-SparkSQLTable/metastore_db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@5ffd2b27 
+Loaded from file:/opt/apache-spark/jars/derby-10.14.2.0.jar
+java.vendor=Arch Linux
+java.runtime.version=17.0.14+7
+user.dir=/home/aloks/spark-notes/07-spark-data-sources-sinks/code/03-SparkSQLTable
+os.name=Linux
+os.arch=amd64
+os.version=6.13.8-zen1-1-zen
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
