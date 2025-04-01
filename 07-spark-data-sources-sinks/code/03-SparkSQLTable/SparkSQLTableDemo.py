@@ -5,7 +5,8 @@ if __name__ == "__main__":
     spark = (
         SparkSession.builder.master("local[3]")
         .appName("SparkSQLTableDemo")
-        .enableHiveSupport()  # allow the connectivity to a persistent hive metastore
+        # enable Hive support, allows interaction with a Hive metastore, enabling persistent storage of table metadata.
+        .enableHiveSupport()
         .getOrCreate()
     )
 
