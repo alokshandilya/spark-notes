@@ -215,3 +215,93 @@ While you don't typically iterate over rows in a PySpark DataFrame in the same w
 >
 > - [_code_](code/01-DataFrameRows/DataFrameRows.py)
 > - [_code_](code/01-DataFrameRows/DataFrameRows_Test.py) for _test case_
+
+#### 3 Scenarios when we directly work with row objects
+
+- manually creating rows and dataframe. (_already discussed_)
+- collecting dataframe rows to the driver. (_already discussed_)
+- _work with an individual row in spark transformation._
+
+Spark dataframe offers many transformation functions. We use these methods when dataframe has schema, if we don't have proper schema for dataframe (not having column structure).
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/c753b633-04c7-4ce7-b542-31ba87064c32" width="75%">
+</p>
+
+We need an extra step to create a column structure and then transformation. Work with row only and transform it into a column structure.
+
+- see code [link](code/02-DataFrameRows2/LogFileDemo.py)
+
+## Working with Dataframe Columns
+
+working with a dataframe requires clear answer to questions lke:
+
+1. What is a Column and how to reference it?
+2. How to create column expressions.
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/5a24f9b8-b3c4-465f-9e29-61bc983fc501" width="75%">
+</p>
+
+```python
+airlineDF: DataFrame = (
+    spark.read.format("csv")
+    .option("inferSchema", "true")
+    .option("header", "true")
+    .load("data/sample.csv")
+)
+
+# using column strings
+airlineTrimDF: DataFrame = airlineDF.select("Origin", "Dest", "Distance").limit(10)  # noqa: E501
+
+airlineTrimDF.show(10)
+logger.info(airlineTrimDF.collect())
+
+# using columns objects (many ways)
+# - column, col, <df>.<column>
+airlineTrimDF.select(column("Origin"), col("Dest"), airlineTrimDF.Distance).show(10)
+```
+
+##### How to create column expressions?
+
+2 ways:
+
+- string expressions or SQL expressions
+
+  ```python
+  # string expressions or SQL expressions
+  airlinesDFCol: DataFrame = airlinesDF.select("Origin", "Dest", "Distance", "Year", "Month", "DayofMonth")
+
+  airlinesDFCol.show(10)
+
+  # airlinesDF.select("Origin", "Dest", "Distance", "to_date(concat(Year, Month, DayofMonth), 'yyyyMMdd') as FlightDate").show(10)
+
+  # shows error: selet method accepts column strings, column object and not column expressions
+  # expr(): convert an expression to a column object
+
+  from pyspark.sql.functions import expr
+
+  columnExprDF: DataFrame = airlinesDF.select("Origin", "Dest", "Distance", expr("to_date(concat(Year, Month, DayofMonth), 'yyyyMMdd') as FlightDate"))
+
+  columnExprDF.show(10)
+  ```
+
+- column object expressions
+
+  ```python
+  # use column objects and build expression, avoid using strings and apply column objects and functions
+
+  # airlinesDF.select("Origin", "Dest", "Distance", expr("to_date(concat(Year, Month, DayofMonth), 'yyyyMMdd') as flightDate")).show(10)
+  from pyspark.sql.functions import to_date, concat
+
+  airlinesDFColObjDF: DataFrame = airlinesDF.select("Origin", "Dest", "Distance", to_date(concat("Year", "Month", "DayofMonth"), 'yyyyMMdd').alias("FlightDate"))
+
+  airlinesDFColObjDF.show(10)
+  ```
+
+
+> ### 3 docs links
+>
+> - [dataframe](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html)
+> - [column](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Column.html)
+> - [built-in functions](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/functions.html)
