@@ -4,7 +4,7 @@ from pyspark.sql.functions import regexp_extract, substring_index
 
 if __name__ == "__main__":
     spark: SparkSession = (
-        SparkSession.builder.appName("LogFileDemo").getOrCreate()  # type: ignore
+        SparkSession.builder.appName("LogFileDemo").getOrCreate()  # type: ignore  # noqa: E501
     )
     logger: Log4J = Log4J(spark)
 
@@ -14,7 +14,12 @@ if __name__ == "__main__":
     # file_df.show()
     # file_df.printSchema()
 
-    log_reg = r'^(\S+) (\S+) (\S+) \[([\w:/]+\s[+\-]\d{4})\] "(\S+) (\S+) (\S+)" (\d{3}) (\S+) "(\S+)" "([^"]*)'
+    # every record in data/apache_logs.txt follows standard apache log file
+    # format with following information:
+    # - IP, client, user, datetime, cmd, request
+    # - protocol, status, bytes, referre, userAgent
+
+    log_reg = r'^(\S+) (\S+) (\S+) \[([\w:/]+\s[+\-]\d{4})\] "(\S+) (\S+) (\S+)" (\d{3}) (\S+) "(\S+)" "([^"]*)'  # noqa: E501
 
     logs_df: DataFrame = file_df.select(
         regexp_extract("value", log_reg, 1).alias("ip"),
@@ -33,12 +38,15 @@ if __name__ == "__main__":
     logger.info("Finished LogFileDemo!!!")
     spark.stop()
 
-
+"""
 ####################
 ###### OUTPUT ######
 ####################
+"""
 
-#   25/04/02 18:29:49 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+#   25/04/02 18:29:49 WARN NativeCodeLoader: Unable to load native-hadoop
+#   library for your platform... using builtin-java classes where applicable
+#
 #   root
 #    |-- ip: string (nullable = true)
 #    |-- date: string (nullable = true)
