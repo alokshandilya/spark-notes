@@ -299,9 +299,94 @@ airlineTrimDF.select(column("Origin"), col("Dest"), airlineTrimDF.Distance).show
   airlinesDFColObjDF.show(10)
   ```
 
-
 > ### 3 docs links
 >
 > - [dataframe](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.html)
 > - [column](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Column.html)
 > - [built-in functions](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/functions.html)
+
+## Creating and Using UDFs
+
+spark allows to create UDF and use them in these 2 types of expressions (_above_).
+
+- string expressions or SQL expressions
+- column object expressions
+
+we already learnt to refer dataframe columns, applying some maths and using
+built-in functions. However, spark also allows to create UDFs (User-Defined
+Functions) and use them in the above 2 types of expressions.
+
+```python
+def parse_gender(gender: str) -> str:
+    # Male, Female, Unknown
+    female_pattern = r"^f$|f.m|w.m"  # f, f*m*, w*m*
+    male_pattern = r"^m$|ma|m.l"  # m, ma*, m*l*
+
+    if re.search(female_pattern, gender.lower()):
+        return "Female"
+    elif re.search(male_pattern, gender.lower()):
+        return "Male"
+    else:
+        return "Unknown"
+```
+
+- **how to use this UDF?**
+  - _create an expression and use it._
+
+#### Column Object Expression
+
+```python
+gender_udf = udf(parse_gender, StringType())
+
+logger.info(msg="Catalog Entry:")
+[logger.info(f) for f in spark.catalog.listFunctions() if "parse_gender" in f.name]  # noqa: E501
+
+# survey_df2 = survey_df.withColumn("Gender", parse_gender("Gender"))
+survey_df2 = survey_df.withColumn("Gender", gender_udf("Gender"))
+```
+
+- `withColumn()` transformation allows to transform a single column without impacting other columns in the dataframe. It takess _2 arguments_: `column_name`, `column_expression`
+  - we can't simply use a function in a column object expression, we need to
+    register our custom function to the driver and make it a UDF.
+  - `udf()` to register the python function using the name of the local python function. Return type: optional, default is `StringType()`.
+  - `udf()` will register it and return a reference to the registered UDF.
+
+> this way is to register your function as a dataframe UDF. This will not
+> register the UDF in the catalog. It will only create UDF and serialize the
+> function to the executor.
+
+> If you want to use the function in a dataframe column object expression, then
+> you must register it as a UDF using `udf()` (_above example_).
+
+- 3 step process to use a UDF:
+  - create your function
+  - register it as a UDF and get the reference
+    > function is registered in spark session, driver will serialize and send
+    > this function to the executors. Executors can run this function.
+  - finally, use your function in expression.
+
+#### String/SQL Expression
+
+The registration process is different, we need to register it as a SQL function
+and it should go to the catalog. That's done using `spark.udf.register()` _(2
+arguments: `function_name`, `signature_of_function`)_.
+
+> this way is to register as a SQL function. This will also create a entry
+> in the catalog.
+
+> If you want to use the function in a SQL expression, then you must register
+> it like this.
+
+```python
+spark.udf.register("parse_gender_udf", parse_gender, StringType())
+
+logger.info(msg="Catalog Entry:")
+[logger.info(f) for f in spark.catalog.listFunctions() if "parse_gender" in f.name]
+
+survey_df3 = survey_df.withColumn(
+    "Gender",
+    expr("parse_gender_udf(Gender)"),
+)
+```
+
+> see [_code_](code/04-UDFs/ExampleUDF.py) for full code example with logs.

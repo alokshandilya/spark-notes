@@ -1,0 +1,5 @@
+25/04/07 12:51:23 INFO ExampleUDF: Starting ExampleUDF!!
+25/04/07 12:51:30 INFO ExampleUDF: Catalog Entry:
+25/04/07 12:51:34 INFO ExampleUDF: Catalog Entry:
+25/04/07 12:51:35 INFO ExampleUDF: [parse_gender_udf, null, null, N/A., org.apache.spark.sql.UDFRegistration$$Lambda$3441/0x000079af84f56e90, true]
+25/04/07 12:51:36 INFO ExampleUDF: Stopping ExampleUDF!!
