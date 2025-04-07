@@ -390,3 +390,7 @@ survey_df3 = survey_df.withColumn(
 ```
 
 > see [_code_](code/04-UDFs/ExampleUDF.py) for full code example with logs.
+
+### Miscellaneous Transformations
+
+- see notebook [_here_](code/05-MisTransformations/MiscTransformatinos.ipynb)
