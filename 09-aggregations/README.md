@@ -20,7 +20,7 @@
 - eg: `lead()`, `lag()`, `rank()`, `dense_rank()`, `cume_dist()` etc.
 - _used for windowing aggregations._
 
-> see [_code_](code/)
+> see [_code_](code/01-Aggregate/Aggregate.ipynb)
 
 ## Exercise
 
