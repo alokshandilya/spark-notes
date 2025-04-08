@@ -87,3 +87,100 @@ Spark optimizes joins using different physical **join strategies**:
 Understanding these helps diagnose performance issues. If you have a join between a large and a small DataFrame, ensuring the small one is broadcast (by adjusting the threshold or using a `broadcast()` hint) can significantly improve performance and reduce the risk of OOM errors caused by large shuffles.
 
 > see [code](code/01-BasicJoins/BasicJoins.ipynb) for examples and _handling column name ambiguity_.
+
+## Outer Joins
+
+A full outer join combines two DataFrames based on a join condition and includes **all rows from both** the left and the right DataFrame.
+
+**How it Works:**
+
+1.  **Matching Rows:** If rows from the left and right DataFrames match according to the join condition, the resulting row contains columns from both DataFrames.
+2.  **Non-Matching Rows (Left):** If a row exists in the left DataFrame but has _no matching row_ in the right DataFrame based on the condition, it is still included in the result. The columns corresponding to the right DataFrame will be filled with `null` for this row.
+3.  **Non-Matching Rows (Right):** If a row exists in the right DataFrame but has _no matching row_ in the left DataFrame based on the condition, it is also included in the result. The columns corresponding to the left DataFrame will be filled with `null` for this row.
+
+**Use Case:**
+
+Full outer joins are useful when you want a complete picture of all records from both datasets, regardless of whether they have matches in the other dataset. It helps identify records present in one dataset but missing in the other.
+
+**PySpark Syntax:**
+
+You use the `.join()` method on a DataFrame and specify the join type using the `how` parameter. The valid strings for a full outer join are:
+
+- `"outer"`
+- `"full"`
+- `"full_outer"` (most explicit)
+
+```python
+from pyspark.sql import SparkSession
+
+# Assume spark is an active SparkSession
+
+# Sample DataFrames
+data1 = [(1, "Alice", "HR"), (2, "Bob", "IT"), (3, "Charlie", "Sales")]
+columns1 = ["id", "name", "dept_left"]
+df1 = spark.createDataFrame(data1, columns1)
+
+data2 = [(1, "New York"), (2, "London"), (4, "Tokyo")]
+columns2 = ["id", "location"]
+df2 = spark.createDataFrame(data2, columns2)
+
+print("Left DataFrame (df1):")
+df1.show()
+
+print("Right DataFrame (df2):")
+df2.show()
+
+# --- Performing the Full Outer Join ---
+# We join on the 'id' column.
+outer_join_df = df1.join(
+    df2,
+    on="id",         # Join condition (equi-join on 'id' column)
+    how="outer"      # Specify the join type as full outer
+)
+
+print("Result of Full Outer Join:")
+outer_join_df.show()
+
+# spark.stop()
+```
+
+**Explanation of the Example Output:**
+
+- **Rows with id 1 and 2:** These IDs exist in both `df1` and `df2`, so the resulting rows contain columns from both (`id`, `name`, `dept_left`, `location`).
+- **Row with id 3:** This ID exists only in `df1`. The result includes this row, but the columns from `df2` (`location`) are `null`.
+- **Row with id 4:** This ID exists only in `df2`. The result includes this row, but the columns from `df1` (`name`, `dept_left`) are `null`.
+
+**Key Points:**
+
+- **`null` Values:** Be prepared to handle `null` values in the resulting DataFrame, as they indicate the absence of a match in one of the original DataFrames.
+- **Join Condition:** The `on` parameter (or a Column expression) defines how rows are matched.
+- **Column Ambiguity:** If the DataFrames share column names _other than_ the join keys used in an equi-join `on="col"` syntax, those columns might become ambiguous. Use techniques like renaming columns before the join or using DataFrame aliases if needed.
+
+### Left Join, Right Join, and Full Outer Join
+
+When we talk about "outer joins", we generally refer to join types that preserve rows from one or both tables/DataFrames even if there isn't a matching row in the other table/DataFrame based on the join condition. They fill in the columns from the non-matching side with `null` values.
+
+There are three main types of outer joins in SQL and PySpark:
+
+1.  **Left Outer Join (or Left Join)**
+
+    - **Behavior:** Keeps **all rows** from the **left** DataFrame. It includes matching rows from the right DataFrame based on the join condition. If a row from the left DataFrame has no match in the right DataFrame, the columns corresponding to the right DataFrame will be filled with `null` values in the result.
+    - **PySpark `how` parameter:** `"left"`, `"left_outer"`
+
+2.  **Right Outer Join (or Right Join)**
+
+    - **Behavior:** Keeps **all rows** from the **right** DataFrame. It includes matching rows from the left DataFrame based on the join condition. If a row from the right DataFrame has no match in the left DataFrame, the columns corresponding to the left DataFrame will be filled with `null` values in the result.
+    - **PySpark `how` parameter:** `"right"`, `"right_outer"`
+
+3.  **Full Outer Join (or Outer Join)**
+    - **Behavior:** Keeps **all rows** from **both** the left and the right DataFrames.
+      - If a row from the left DataFrame has no match in the right, the right-side columns are `null`.
+      - If a row from the right DataFrame has no match in the left, the left-side columns are `null`.
+      - If rows match, columns from both are included.
+    - **PySpark `how` parameter:** `"outer"`, `"full"`, `"full_outer"`
+
+In essence:
+
+- **Left Outer:** _All of Left, Matches of Right._
+- **Right Outer:** _All of Right, Matches of Left._
+- **Full Outer:** _All of Left, All of Right._
