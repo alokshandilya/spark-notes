@@ -1,7 +1,7 @@
 # Spark Joins in PySpark
 
-- [Dataframe Joins and column name ambiguity](code/01-BasicJoins/BasicJoins.ipynb)
-- Outer Joins in Dataframe
+- [Dataframe Joins and column name ambiguity](code/01-BasicJoins.ipynb)
+- [Outer Joins in Dataframe](code/02-OuterJoins.ipynb)
 - Internals of Spark Join and shuffle
 - Optimizing your joins
 - Implementing Bucket Joins
@@ -184,3 +184,5 @@ In essence:
 - **Left Outer:** _All of Left, Matches of Right._
 - **Right Outer:** _All of Right, Matches of Left._
 - **Full Outer:** _All of Left, All of Right._
+
+> see [code](code/02-OuterJoins.ipynb) for examples.
