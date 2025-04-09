@@ -275,4 +275,4 @@ SMJ is a robust join strategy for large datasets but understanding the shuffle c
 - stage 2, 3 were doing **shuffle write**
   - both stages in _3 parallel tasks, because both the dataframes had 3 partitions._
 - stage 4 was doing **shuffle read**, that too in _3 parallel tasks_
-  - _3 partitions of the left dataframe were merged with 3 partitions of the right dataframe._
+  - because se had set shuffle partitions to 3, `spark.conf.set("spark.sql.shuffle.partitions", 3)`
