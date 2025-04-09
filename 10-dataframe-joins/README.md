@@ -186,3 +186,75 @@ In essence:
 - **Full Outer:** _All of Left, All of Right._
 
 > see [code](code/02-OuterJoins.ipynb) for examples.
+
+## Internals of Spark Joins
+
+Spark Joins are one of the most common causes for slowing down your application.
+
+Spark implements 2 approaches to join DataFrames:
+
+1.  **Shuffle Sort Merge Join (SMJ)**
+2.  **Broadcast Hash Join (BHJ)**
+
+Spark Joins are fundamental operations, but they can significantly impact application performance, especially when dealing with large datasets. Spark employs several join strategies, with two primary ones being:
+
+### Shuffle Sort Merge Join (SMJ)
+
+SMJ is often Spark's default join strategy when neither table is small enough to be broadcast efficiently (see Broadcast Hash Join). Its underlying principles are reminiscent of classic MapReduce patterns.
+
+**The Challenge: Distributed Data**
+
+Imagine two large DataFrames, `dfA` and `dfB`, that you want to join on a specific key column. In a Spark cluster:
+
+- Each DataFrame is divided into multiple partitions.
+- These partitions are distributed across different worker nodes (executors) in the cluster.
+- A single executor might hold partitions from `dfA` and `dfB`, but the records needed to perform the join (i.e., records with the _same_ join key) might reside on entirely different partitions and, consequently, different executors.
+
+**Direct Join Issue:** You cannot perform a complete join locally on any single executor because the matching records required for the join are likely scattered across the cluster. All records with the same join key value from _both_ DataFrames must be brought together onto the same executor to be joined.
+
+**The SMJ Solution: A Multi-Stage Process**
+
+SMJ tackles this distributed data challenge in primarily two major phases: Shuffle and Sort-Merge.
+
+**Phase 1: Shuffle**
+
+This phase reorganizes the data across the network so that records with the same join key from both DataFrames end up in the same partition on the same executor.
+
+1.  **Map/Shuffle Write:**
+
+    - Spark tasks read the input partitions of _both_ DataFrames (`dfA` and `dfB`).
+    - For each record, they extract the join key.
+    - Based on the join key (typically using a hash function), Spark determines which _output_ shuffle partition the record belongs to. The number of these output partitions is determined by the `spark.sql.shuffle.partitions` configuration (default is 200).
+    - Each task writes its records to local shuffle files, partitioned according to the target shuffle partition determined by the key.
+
+2.  **Shuffle Read/Fetch:**
+    - Tasks for the _next_ stage (the Sort-Merge stage) are launched. Each task is responsible for processing one of the target shuffle partitions created in the previous step.
+    - To do this, each task reads the corresponding shuffle blocks (the relevant portion of the shuffle files) from _all_ the executors that wrote data for that specific partition in the Shuffle Write step.
+    - This process of transferring partitioned data blocks across the network from the writers (map side) to the readers (reduce side) is the **Shuffle Operation**.
+
+**Why Shuffle is Expensive:** This data transfer across the cluster network is often the most time-consuming part of the SMJ join. It involves:
+
+- **Network I/O:** Sending potentially large amounts of data between executors.
+- **Disk I/O:** Writing and reading shuffle files to/from local disks.
+- **Serialization/Deserialization:** Converting data to and from formats suitable for network transfer or disk storage.
+  The performance is heavily dependent on network bandwidth, disk speed, data size, and potential data skew (where some keys have vastly more records than others, overloading specific partitions/tasks).
+
+**Phase 2: Sort-Merge**
+
+Once the shuffle phase is complete, each executor holds one or more shuffle partitions. Critically, each shuffle partition now contains all the records from _both_ original DataFrames that share the same range of join keys assigned to that partition.
+
+1. **Sort:** Within each shuffle partition, Spark sorts the data from `dfA` and the data from `dfB` _independently_ based on the join key.
+2. **Merge:** With both datasets now sorted by the join key within the partition, Spark can efficiently perform the join. It iterates through the two sorted datasets simultaneously (similar to the merge step in merge-sort), comparing keys. When matching keys are found, the corresponding records are combined (joined) to produce the output records. This merge process is computationally efficient because the data is pre-sorted.
+
+The results from the merge step across all parallel tasks/partitions form the final joined DataFrame.
+
+**Key Takeaways & Performance Considerations:**
+
+- SMJ requires shuffling data across the network, which is often the primary bottleneck.
+- The process involves partitioning data by join key (Shuffle Write), transferring data (Shuffle Read), sorting data within new partitions, and finally merging the sorted data.
+- **Tuning SMJ often involves optimizing the Shuffle operation:**
+  - Adjusting `spark.sql.shuffle.partitions` appropriately for the cluster size and data volume.
+  - Addressing data skew (ensuring keys are distributed relatively evenly).
+  - Ensuring adequate cluster resources (network bandwidth, memory, disk I/O).
+
+SMJ is a robust join strategy for large datasets but understanding the shuffle cost is crucial for performance tuning in Spark.
