@@ -258,3 +258,21 @@ The results from the merge step across all parallel tasks/partitions form the fi
   - Ensuring adequate cluster resources (network bandwidth, memory, disk I/O).
 
 SMJ is a robust join strategy for large datasets but understanding the shuffle cost is crucial for performance tuning in Spark.
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/26e1463c-a022-40cb-a62b-07e4598c422e" width="75%">
+</p>
+
+- for the code (_link above_) (3 partition, 3 threads in local)
+  - join operation accomplished in 3 stages, `stage2`, `stage3` for creating **Map Exchange** for 2 dataframes.
+  - _lines from one stage to another are indicating shuffle_
+  - data is moving from **Map Exchange** to **Reduce Exchange** (shuffle) and then to **Map Merge**.
+
+<p align="center">
+    <img src="https://github.com/user-attachments/assets/3be4db2c-d93f-4275-bef9-18f961a8c418" width="75%">
+</p>
+
+- stage 2, 3 were doing **shuffle write**
+  - both stages in _3 parallel tasks, because both the dataframes had 3 partitions._
+- stage 4 was doing **shuffle read**, that too in _3 parallel tasks_
+  - _3 partitions of the left dataframe were merged with 3 partitions of the right dataframe._
