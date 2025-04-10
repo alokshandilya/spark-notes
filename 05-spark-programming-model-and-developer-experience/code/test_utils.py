@@ -43,7 +43,7 @@ class TestUtils(TestCase):
             count_dict[row["country"]] = row["count"]
 
         self.assertEqual(count_dict["UK"], 2, "UK count should be 2")
-        self.assertEqual(count_dict["Australia"], 1, "Australia count should be 1")
+        self.assertEqual(count_dict["Australia"], 1, "Australia count should be 1")  # noqa: E501
         self.assertEqual(count_dict["India"], 4, "India count should be 4")
         self.assertEqual(count_dict["Germany"], 1, "Germany count should be 4")
         self.assertEqual(count_dict["Canada"], 1, "Canada count should be 4")
