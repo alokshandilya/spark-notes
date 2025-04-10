@@ -2,21 +2,21 @@
 
 **Table of Contents**
 
-1.  [Introduction](https://www.google.com/search?q=%23introduction-1)
-    - [History](https://www.google.com/search?q=%23history)
-2.  [Data Lake](https://www.google.com/search?q=%23data-lake-1)
-    - [Storage Layer](https://www.google.com/search?q=%23storage-layer)
-    - [Ingestion Layer](https://www.google.com/search?q=%23ingestion-layer)
-    - [Processing Layer](https://www.google.com/search?q=%23processing-layer)
-    - [Consume Layer](https://www.google.com/search?q=%23consume-layer)
-    - [Additional Capabilities](https://www.google.com/search?q=%23additional-capabilities)
-3.  [Apache Spark](https://www.google.com/search?q=%23apache-spark-1)
-4.  [Spark Ecosystem](https://www.google.com/search?q=%23spark-ecosystem-1)
-    - [Spark Engine Responsibilities](https://www.google.com/search?q=%23spark-engine-responsibilities)
-    - [Spark Core Layer](https://www.google.com/search?q=%23spark-core-layer)
-    - [Spark Core APIs (RDDs, DataFrames, Datasets)](https://www.google.com/search?q=%23spark-core-apis-rdds-dataframes-datasets)
-    - [Topmost Layer (Libraries)](https://www.google.com/search?q=%23topmost-layer-libraries)
-5.  [Why Spark?](https://www.google.com/search?q=%23why-spark-1)
+1. [Introduction](#introduction-1)
+   - [History](#history)
+2. [Data Lake](#data-lake-1)
+   - [Storage Layer](#storage-layer)
+   - [Ingestion Layer](#ingestion-layer)
+   - [Processing Layer](#processing-layer)
+   - [Consume Layer](#consume-layer)
+   - [Additional Capabilities](#additional-capabilities)
+3. [Apache Spark](#apache-spark-1)
+4. [Spark Ecosystem](#spark-ecosystem-1)
+   - [Spark Engine Responsibilities](#spark-engine-responsibilities)
+   - [Spark Core Layer](#spark-core-layer)
+   - [Spark Core APIs (RDDs, DataFrames, Datasets)](#spark-core-apis-rdds-dataframes-datasets)
+   - [Topmost Layer (Libraries)](#topmost-layer-libraries)
+5. [Why Spark?](#why-spark-1)
 
 ## Introduction
 
