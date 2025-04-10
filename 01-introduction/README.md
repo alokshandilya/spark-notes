@@ -40,7 +40,7 @@
   3.  Processing and structuring the data for business intelligence and reporting.
 
 <p align="center">
-    <img src="[https://github.com/user-attachments/assets/57c44f35-4dbf-419f-8f54-f663af9a95ef](https://github.com/user-attachments/assets/57c44f35-4dbf-419f-8f54-f663af9a95ef)" width="75%" alt="Data Warehouse Diagram">
+    <img src="https://github.com/user-attachments/assets/57c44f35-4dbf-419f-8f54-f663af9a95ef" width="75%" alt="Data Warehouse Diagram">
 </p>
 
 A **data lake** is a centralized repository designed to store, process, and secure vast amounts of data in its **native, raw format**. It accommodates diverse data types, including structured, semi-structured, and unstructured data.
@@ -95,7 +95,7 @@ Cloud object stores are highly favored due to their **scalability, high availabi
 - Flexibility is key to meet diverse downstream needs.
 
 <p align="center">
-    <img src="[https://github.com/user-attachments/assets/fd75d8f7-3229-4a92-8b1a-f2893c0ceeb8](https://github.com/user-attachments/assets/fd75d8f7-3229-4a92-8b1a-f2893c0ceeb8)" width="75%" alt="Data Lake Components Diagram">
+    <img src="https://github.com/user-attachments/assets/fd75d8f7-3229-4a92-8b1a-f2893c0ceeb8" width="75%" alt="Data Lake Components Diagram">
 </p>
 
 ### Additional Capabilities
@@ -121,7 +121,7 @@ Cloud object stores are highly favored due to their **scalability, high availabi
 ## Spark Ecosystem
 
 <p align="center">
-    <img src="[https://github.com/user-attachments/assets/a1fec4f3-75e9-4aa8-be57-5375d14ebbe8](https://github.com/user-attachments/assets/a1fec4f3-75e9-4aa8-be57-5375d14ebbe8)" width="75%" alt="Spark Ecosystem Diagram">
+    <img src="https://github.com/user-attachments/assets/a1fec4f3-75e9-4aa8-be57-5375d14ebbe8" width="75%" alt="Spark Ecosystem Diagram">
 </p>
 
 > **Key Point:** `Apache Spark` excels at **distributed computation**. It relies on external systems for **cluster management** and **persistent storage**.
