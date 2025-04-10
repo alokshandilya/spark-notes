@@ -371,3 +371,209 @@ Shuffle joins between large DataFrames can be problematic due to:
 - **Uneven Shuffle Distribution (Key Skew):** Detect via Spark UI. Address by filtering skewed keys, applying salting techniques, or leveraging Spark's AQE skew join optimization.
 
 Successfully optimizing these joins requires understanding your data's characteristics (size, key distribution) and applying these techniques iteratively while monitoring performance through the Spark UI.
+
+## Optimizing Joins: Large with Small DataFrames (Broadcast Hash Join)
+
+When joining DataFrames in Spark, the strategy depends heavily on their relative sizes:
+
+1. **Large-to-Large Join:** Typically requires a **Shuffle Join**, where data from both DataFrames is repartitioned and shuffled across the network based on join keys.
+2. **Large-to-Small Join:** Can often leverage a **Broadcast Hash Join (BHJ)**, which is usually significantly faster than a shuffle join for this scenario.
+
+While a large-to-large join necessitates a shuffle, joining a large DataFrame with a _small_ one offers a powerful optimization: avoiding the shuffle of the large DataFrame altogether.
+
+**How Broadcast Hash Join Works:**
+
+Instead of shuffling potentially massive amounts of data from the large DataFrame, Spark can broadcast the _entire_ small DataFrame to all nodes involved in processing the large one.
+
+_Example:_
+
+Consider joining a huge `sales` DataFrame with a small `products` DataFrame:
+
+- `sales` DataFrame: Millions or billions of records, partitioned across many executors (e.g., 100 partitions on 100 executors). Size could be terabytes. (`order_id`, `product_id`, `units`, `price`, ...)
+- `products` DataFrame: Relatively small, perhaps only a few hundred or thousand records (e.g., 200 unique products). Size might be only megabytes (e.g., 2MB), potentially fitting in a single partition on one executor initially. (`product_id`, `product_name`, `list_price`, ...)
+
+- **Scenario 1: Shuffle Join (Inefficient here)**
+
+  1. Data from _both_ `sales` and `products` would be read.
+  2. Based on the `product_id` join key, data from both would be hashed and shuffled across the network to new partitions (e.g., potentially 200 partitions based on unique keys if `spark.sql.shuffle.partitions` is high enough).
+  3. This involves sending the _entire multi-terabyte `sales` DataFrame_ over the network – extremely costly and slow.
+
+- **Scenario 2: Broadcast Hash Join (BHJ) (Much Better)**
+  1. The small `products` DataFrame (2MB) is first collected by the **Spark Driver**.
+  2. The Driver then **broadcasts** this complete `products` DataFrame to **every executor** hosting partitions of the large `sales` DataFrame (e.g., 100 executors).
+  3. Each executor now holds a local copy of the _entire_ `products` data (as a hash map for efficient lookups).
+  4. The join occurs locally on each executor: each `sales` partition is processed, and for each sales record, the corresponding `product_id` is looked up in the local `products` hash map.
+  5. **Crucially, the large `sales` DataFrame never leaves its executors – no shuffling of the large table occurs.**
+
+**Why is BHJ faster?**
+
+- **Massively Reduced Network I/O:** Instead of shuffling terabytes of `sales` data, we only broadcast the small `products` table. Even sending 2MB to 100 executors is only 200MB of network traffic, vastly less than shuffling the `sales` data.
+- **No Shuffle Stage for Large Table:** Eliminates the computationally expensive sorting and shuffling phase for the large DataFrame.
+
+**When does Spark use BHJ?**
+
+1. **Automatically:** Spark's Catalyst optimizer automatically performs a BHJ if the estimated physical size of one DataFrame is below the configuration threshold `spark.sql.autoBroadcastJoinThreshold` (default is often 10MB, but widely configurable).
+2. **Manually:** You can explicitly _hint_ to Spark to broadcast a specific DataFrame using the `broadcast()` function:
+   ```python
+   # Assuming spark is your SparkSession
+   large_df.join(broadcast(small_df), "join_key")
+   ```
+
+**What qualifies as "Small"?**
+
+"Small" means the DataFrame must fit comfortably into the memory of:
+
+1. The **Spark Driver** (which collects it first).
+2. **Each Spark Executor** (which holds a copy).
+
+This doesn't strictly mean a few MB; it could potentially be hundreds of MBs or even a few GBs, _provided_ your Driver and Executors have sufficient memory allocated. You can control this memory using Spark submit options like `--driver-memory` and `--executor-memory`.
+
+**Caution:** Be mindful of available memory. Broadcasting a DataFrame that's too large (even if below the threshold, if memory is tight) can cause OutOfMemoryErrors (OOM) on the Driver or Executors. Always verify available resources and monitor the Spark UI to confirm a BHJ was executed successfully.
+
+> While Spark automatically employs Broadcast Hash Join (BHJ) if a DataFrame appears small enough (based on spark.sql.autoBroadcastJoinThreshold and size estimates), developers often possess more accurate insights into their data. Knowing the true size, distribution, or post-transformation memory footprint allows developers to make a more informed decision and explicitly use the broadcast() hint, potentially yielding better results than relying solely on Spark's automatic optimization.
+
+> see [code](code/04-BroadcastJoin.py) for example.
+
+## Optimizing Joins with Bucketing (Bucket Join)
+
+When joining two large DataFrames frequently, the shuffle required by standard join strategies (like Shuffle Sort Merge Join) can become a recurring performance bottleneck. **Bucketing** is a technique that allows you to perform this expensive shuffle _once_ when initially writing the data, potentially eliminating the need for shuffling during subsequent join operations on those datasets.
+
+**The Goal:** Pre-organize data in tables based on join keys so that Spark's Sort Merge Join can directly join corresponding buckets without shuffling data across the network at query time.
+
+**Example: Standard Shuffle Sort Merge Join**
+
+Without bucketing, joining two large DataFrames typically involves a shuffle:
+
+```python
+# Assuming spark is an active SparkSession
+# spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1") # Disable broadcast for demo if needed
+# spark.conf.set("spark.sql.adaptive.enabled", "false") # Disable AQE for predictable plans
+
+flight_time_df1: DataFrame = spark.read.format("json").load("data/d1/") # Large DataFrame 1
+flight_time_df2: DataFrame = spark.read.format("json").load("data/d2/") # Large DataFrame 2
+
+join_expr = flight_time_df1.id == flight_time_df2.id
+join_df = flight_time_df1.join(flight_time_df2, join_expr, "inner")
+
+# Action to trigger the join
+join_df.collect() # Or .show(), .count(), etc.
+
+# Check Spark UI SQL tab for the query plan:
+# You will typically see ShuffleExchange operators followed by SortMergeJoin.
+# input("Press Enter to continue...")
+```
+
+**Planning Ahead with Bucketing**
+
+If you know you'll be joining `flight_time_df1` and `flight_time_df2` on the `id` column repeatedly, you can bucket both datasets by `id` when saving them.
+
+- **One-Time Shuffle Cost:** Writing bucketed data involves hashing the bucketing key (`id`) and shuffling rows so that all rows with the same hash value land in the same target bucket file. This shuffle happens _only during the write operation_.
+- **Join-Time Benefit:** Once both tables are bucketed identically (same keys, same number of buckets), Spark can often perform subsequent joins _without any shuffle_, significantly speeding up the queries.
+
+**How to Create Bucketed Tables**
+
+You typically perform bucketing after initial data preparation (cleaning, filtering, schema adjustments) and save the results as persistent tables (usually managed tables, registered in the Hive metastore).
+
+```python
+# --- This code would run in a separate data preparation job ---
+
+# Initial data loading and preparation
+df1_raw: DataFrame = spark.read.format("json").load("data/d1/")
+df2_raw: DataFrame = spark.read.json("data/d2/")
+
+# ... perform necessary cleaning, filtering, transformations ...
+# e.g., select needed columns, fix data types
+df1_prepared = df1_raw.select("id", "DEST", "FL_DATE", "OP_CARRIER") # Example
+df2_prepared = df2_raw.select("id", "ARR_TIME", "DEP_TIME", "DISTANCE") # Example
+
+# Define number of buckets - crucial decision!
+# Needs consideration of data size, skew, and cluster capacity.
+# Aim for reasonably sized buckets (e.g., 100MB-1GB per bucket file is often cited).
+# Should align with typical parallelism needs (e.g., similar to spark.sql.shuffle.partitions).
+num_buckets = 3 # Example value, tune based on your data/cluster
+
+# Create database if needed
+spark.sql("CREATE DATABASE IF NOT EXISTS MY_DB")
+spark.sql("USE MY_DB")
+
+# --- Write bucketed tables ---
+# CRITICAL: Do NOT use coalesce(1) before bucketBy!
+# coalesce(1) would force all data through one node, serializing the write
+# and defeating the purpose of parallel bucketing.
+
+print(f"Writing df1_prepared bucketed by 'id' into {num_buckets} buckets...")
+df1_prepared.write \
+    .bucketBy(num_buckets, "id") \
+    .sortBy("id") # Optional: Pre-sorts data within buckets, can speed up merge join further
+    .mode("overwrite") \
+    .saveAsTable("MY_DB.flight_data1_bucketed")
+
+print(f"Writing df2_prepared bucketed by 'id' into {num_buckets} buckets...")
+df2_prepared.write \
+    .bucketBy(num_buckets, "id") \
+    .sortBy("id") # Optional: Keep consistent with df1
+    .mode("overwrite") \
+    .saveAsTable("MY_DB.flight_data2_bucketed")
+
+print("Bucketed tables created.")
+# --- End of data preparation job ---
+```
+
+**Performing the Bucket Join (No Shuffle)**
+
+Now, in a subsequent application or query, you can join these pre-bucketed tables.
+
+```python
+# --- This code runs in a later analysis job ---
+
+# Ensure bucketing is enabled (default is true)
+# spark.conf.set("spark.sql.sources.bucketing.enabled", "true")
+
+# Disable Broadcast join just to specifically observe the bucket join optimization
+spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")
+spark.conf.set("spark.sql.adaptive.enabled", "false") # Easier to see static plan
+
+# Read the bucketed tables
+df1_bucketed: DataFrame = spark.read.table("MY_DB.flight_data1_bucketed")
+df2_bucketed: DataFrame = spark.read.table("MY_DB.flight_data2_bucketed")
+
+print("Schema and Bucketing Info:")
+print(f"df1 Partitions: {df1_bucketed.rdd.getNumPartitions()}")
+print(f"df2 Partitions: {df2_bucketed.rdd.getNumPartitions()}")
+
+# Define the join expression (must use the bucketing key)
+join_expr = df1_bucketed.id == df2_bucketed.id
+
+# Perform the join
+print("Performing join on bucketed tables...")
+join_df: DataFrame = df1_bucketed.join(df2_bucketed, join_expr, "inner")
+
+# Use explain() to verify the plan before execution
+join_df.explain()
+
+# Action to trigger the join
+join_df.collect()
+
+print("Join completed. Check Spark UI SQL tab for the plan.")
+# Expect to see SortMergeJoin WITHOUT preceding ShuffleExchange operators.
+# input("Press Enter to continue...")
+```
+
+**Prerequisites for Shuffle-Skipped Bucket Join:**
+
+For Spark to skip the shuffle phase during a join using bucketing:
+
+1.  **Bucketing Enabled:** `spark.sql.sources.bucketing.enabled` must be `true` (default).
+2.  **Tables Registered:** Bucketing information must be available via the metastore (achieved using `saveAsTable`).
+3.  **Same Number of Buckets:** Both tables must be bucketed using the _exact same number of buckets_.
+4.  **Same Bucketing/Join Keys:** Both tables must be bucketed on the _exact keys_ used in the join condition.
+5.  **Compatible Join Type:** Typically works for Inner joins, Left Outer, etc. (Check Spark documentation for specifics).
+6.  **Supported File Formats:** Works well with formats like Parquet and ORC.
+
+**Choosing the Number of Buckets:**
+
+- Too few buckets: May lead to very large buckets, reducing parallelism and potentially causing skew issues if the hash distribution isn't perfect.
+- Too many buckets: Can lead to many small files, potentially hurting read performance (file listing/opening overhead).
+- Consider data size, key cardinality, and typical cluster core count. Aim for bucket sizes that are manageable (e.g., 100s of MBs). It often makes sense to align the number of buckets with `spark.sql.shuffle.partitions`.
+
+> Bucketing is a powerful optimization for scenarios involving repeated joins between large datasets on the same keys. It trades a one-time shuffling cost during data writing for potentially shuffle-free (and thus much faster) joins at query time. It requires careful planning during the data layout phase (a design-time decision) based on understanding your data and how it will be used.
