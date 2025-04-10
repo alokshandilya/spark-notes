@@ -27,8 +27,9 @@ join_df = flight_time_df1.join(flight_time_df2, join_expr, "inner")
 # define custom logic to write output of streaming query to external storage
 # systems.
 
-join_df.foreach(lambda f: None)
-# join_df.show()
+# join_df.foreach(lambda f: None)
+join_df.collect()
 
 # see spark UI @ http://localhost:4040/jobs/
+# also, see http://localhost:4040/SQL/ for Exhange/Shuffle, SortMergeJoin
 input("Press Enter to continue...")  # for Spark UI
