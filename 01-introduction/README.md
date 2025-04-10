@@ -2,21 +2,21 @@
 
 **Table of Contents**
 
-1. [Introduction](#introduction-1)
+1. [Introduction](#introduction)
    - [History](#history)
-2. [Data Lake](#data-lake-1)
+2. [Data Lake](#data-lake)
    - [Storage Layer](#storage-layer)
    - [Ingestion Layer](#ingestion-layer)
    - [Processing Layer](#processing-layer)
    - [Consume Layer](#consume-layer)
    - [Additional Capabilities](#additional-capabilities)
-3. [Apache Spark](#apache-spark-1)
-4. [Spark Ecosystem](#spark-ecosystem-1)
+3. [Apache Spark](#apache-spark)
+4. [Spark Ecosystem](#spark-ecosystem)
    - [Spark Engine Responsibilities](#spark-engine-responsibilities)
    - [Spark Core Layer](#spark-core-layer)
    - [Spark Core APIs (RDDs, DataFrames, Datasets)](#spark-core-apis-rdds-dataframes-datasets)
    - [Topmost Layer (Libraries)](#topmost-layer-libraries)
-5. [Why Spark?](#why-spark-1)
+5. [Why Spark?](#why-spark)
 
 ## Introduction
 
